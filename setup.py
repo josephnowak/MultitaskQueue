@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
 setup(
     name='multitask_queue',
     version='0.01',
-    description='Framework to organize historical tasks useful for backtesting',
+    description='Framework for running multiple multitasks, useful for backtesting',
     author='Joseph Nowak',
     author_email='josephgonowak97@gmail.com',
     classifiers=[
@@ -18,7 +18,7 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python :: 3.8',
     ],
-    keywords='Framework Organizer Historical Backtest',
+    keywords='Framework Queue DAGs Backtest Task Multitask MultitaskQueue',
     packages=find_packages(),
     install_requires=required
 )
