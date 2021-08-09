@@ -18,7 +18,7 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python :: 3.8',
     ],
-    keywords='Framework Organizer Historical Backtest',
+    keywords='Framework Queue DAGs Backtest Task Multitask MultitaskQueue',
     packages=find_packages(),
     install_requires=required
 )
