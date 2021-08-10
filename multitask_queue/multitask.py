@@ -75,12 +75,12 @@ class Multitask:
                 for task in classified_tasks.get(type_task, []):
                     independents.append(task)
                     result = data.update(task.result)
-                    task.run()
+                    task.run(data)
 
             # run the parallel and async tasks
             for type_task in ['parallel', 'async']:
                 for task in classified_tasks.get(type_task, []):
-                    task.run()
+                    task.run(data)
 
             # run the regular tasks
             for task in classified_tasks.get('regular', []):
@@ -154,31 +154,40 @@ class MultitasksQueue:
             self,
             data: Dict[str, Any],
             tasks: Set[str] = None,
-            multitasks: List[Multitask] = None
+            mt_queue: List[Multitask] = None
     ):
         tasks = set() if tasks is None else tasks
+        data['user_tasks'] = tasks
         tasks = self.autofill_tasks(tasks, data)
-        tasks_organizer = self.tasks_organizer.filter_tasks(tasks, copy_deep=True)
+        data['user_tasks'] = tasks
 
-        multitasks_queue = MultitasksOrganizer(
-            multitasks=[] if multitasks is None else multitasks
+        if tasks:
+            tasks_organizer = self.tasks_organizer.filter_tasks({task.name for task in tasks}, copy_deep=True)
+        else:
+            tasks_organizer = self.tasks_organizer.copy(deep=True)
+
+        mt_queue = MultitasksOrganizer(
+            multitasks=[] if mt_queue is None else mt_queue
         )
-        data['multitasks_queue'] = multitasks_queue
+        data['mt_queue'] = mt_queue
 
         multitask = Multitask(
             'preprocess',
             events={'preprocess'},
         )
+        data['multitask'] = multitask
         multitask.run(data, tasks_organizer)
 
-        while not multitasks_queue.empty():
-            multitask = multitasks_queue.get()
+        while not mt_queue.empty():
+            multitask = mt_queue.get()
+            data['multitask'] = multitask
             multitask.run(data, tasks_organizer)
 
         multitask = Multitask(
             'postprocess',
             events={'postprocess'},
         )
+        data['multitask'] = multitask
         multitask.run(data, tasks_organizer, check_independent_finish=True)
 
     def autofill_tasks(self, tasks: Set[str], data):
@@ -189,15 +198,18 @@ class MultitasksQueue:
             tasks_to_check_autofill = tasks_to_check_autofill[1:]
             if task.type_task != 'autofill':
                 autofilled_tasks.add(task)
-                invalid_tasks = list(t for t in task.autofill if t not in self.tasks_organizer)
-                if invalid_tasks:
-                    raise ValueError(
-                        f'The task {task.name} is autofilling '
-                        f'the next tasks that are not in the DAG: {invalid_tasks}'
-                    )
-                tasks_to_check_autofill += list(task.autofill - autofilled_tasks)
+                new_tasks = task.autofill
             else:
-                tasks_to_check_autofill += list(set(task.run(data)) - autofilled_tasks)
+                task.run(data)
+                new_tasks = set(task.result)
+
+            invalid_tasks = list(t for t in new_tasks if t not in self.tasks_organizer)
+            if invalid_tasks:
+                raise ValueError(
+                    f'The task {task.name} is autofilling '
+                    f'the next tasks that are not in the DAG: {invalid_tasks}'
+                )
+            tasks_to_check_autofill += list(new_tasks - autofilled_tasks)
         return autofilled_tasks
 
 

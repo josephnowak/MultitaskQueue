@@ -65,14 +65,14 @@ class TestMultitask:
 
     def test_multitasks_queue(self):
         @pre_execution_task(exec_on_events=['preprocess'])
-        def enqueue_multitasks(multitasks_queue: MultitasksOrganizer):
-            multitasks_queue.put(
+        def enqueue_multitasks(mt_queue: MultitasksOrganizer):
+            mt_queue.put(
                 Multitask(
                     multitask_id=1,
                     events={'modification'}
                 )
             )
-            multitasks_queue.put(
+            mt_queue.put(
                 Multitask(
                     multitask_id=2,
                     events={'exception'}

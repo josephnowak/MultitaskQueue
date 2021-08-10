@@ -86,6 +86,12 @@ class Task:
     def __hash__(self):
         return hash(self.name)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
     @property
     def task_descriptor(self):
         return self._task_descriptor
@@ -109,6 +115,10 @@ class Task:
     @property
     def type_task(self):
         return self.task_descriptor.type_task
+
+    @property
+    def autofill(self):
+        return self.task_descriptor.autofill
 
     def copy(self):
         return Task(
@@ -177,14 +187,14 @@ class TasksOrganizer:
         filtered_tasks = {
             name: task.copy() if copy_deep else task
             for name, task in self.tasks.items()
-            if name not in tasks_name
+            if name in tasks_name
         }
         filtered_classified_tasks = {
             classification: [
                 {
                     task.copy() if copy_deep else task
                     for task in tasks
-                    if task not in tasks_name
+                    if task.name in tasks_name
                 }
                 for tasks in ordered_tasks
             ]
@@ -200,6 +210,22 @@ class TasksOrganizer:
 
         self.classified_tasks = filtered_classified_tasks
         self.tasks = filtered_tasks
+
+    def copy(self, deep: bool = True):
+        task_organizer = TasksOrganizer([])
+        task_organizer.max_deep = self.max_deep
+        if deep:
+            filtered_tasks = {name: task.copy() for name, task in self.tasks.items()}
+            filtered_classified_tasks = {
+                classification: [{task.copy() for task in tasks} for tasks in ordered_tasks]
+                for classification, ordered_tasks in self.classified_tasks.items()
+            }
+            task_organizer.classified_tasks = filtered_classified_tasks
+            task_organizer.tasks = filtered_tasks
+
+        task_organizer.classified_tasks = self.classified_tasks
+        task_organizer.tasks = self.tasks
+        return task_organizer
 
     def __iter__(self) -> Iterable[Dict[str, List[Task]]]:
         iterators = {classification: iter(tasks) for classification, tasks in self.classified_tasks.items()}

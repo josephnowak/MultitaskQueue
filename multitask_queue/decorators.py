@@ -53,7 +53,9 @@ def general_task(
             'autofill',
             'pre_execution',
             'parallel',
-            'independent'
+            'independent',
+            'async',
+            'async_independent'
         ],
         exec_after_tasks: List[str] = None,
         exec_before_tasks: List[str] = None,
@@ -62,14 +64,15 @@ def general_task(
     """
     A task is the smaller unit of execution, every task is basically a node in a DAG so, every node consist of a set
     of dependencies (other nodes), a type of execution (the type_task option is explained in every of the
-    different decorators.) and a set of events which are used to indicate to the multitask executor which multitask
-    must execute this task (read the docs of Multitask Organizer for more info).
+    different decorators.) and a set of events which are used to indicate to the multitask if it must execute this task
+
     Every task must return a dictionary, this dictionary is used to store the results and then send them to the other
-    nodes.
+    nodes, except for the autofill tasks which must return a list.
+
     Parameters
     ----------
     exec_on_events: List[str]
-        The exec_on_events are used by the `Multitask Organizer` to detected which exec_on_events can be executed in a Multitask,
+        It's used by the `Multitask` class to filter based on the attribute event
         by default there is only 'preprocess' and 'postprocess', you can add any other exec_on_events.
     type_task: Literal['regular', 'autofill', 'pre_execution', 'parallel', 'independent']
         Indicate the way that your task is going to be executed, for more info read the docs of the other tasks
