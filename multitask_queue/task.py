@@ -6,7 +6,7 @@ import inspect
 from functools import reduce
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 from typing import List, Dict, Iterable, Literal, Optional, Callable, Any, Set, Union, Hashable
-from pydantic import BaseModel, validators, validate_arguments
+from pydantic import BaseModel, validators, validate_arguments, validator
 from loguru import logger
 
 
@@ -24,17 +24,21 @@ class TaskDescriptor(BaseModel):
         'autofill',
         'pre_execution',
         'parallel',
-        'independent',
-        'async',
-        'async_independent'
+        'independent'
     ]
     exec_on_events: Set[str]
     exec_after_tasks: Set[str] = set()
     exec_before_tasks: Set[str] = set()
     autofill: Set[str] = set()
-    type_parallelization: Optional[Literal['thread', 'process']] = 'thread'
+    type_parallelization: Optional[Literal['thread', 'process', 'async']] = None
     parameters: List[str] = None
     default_parameters: Dict[str, Any] = None
+
+    @validator('type_parallelization')
+    def check_parallelization_type(cls, v, values):
+        if values['type_task'] in ['parallel', 'independent']:
+            assert v is not None
+        return v
 
     def __init__(
             self,
@@ -77,8 +81,8 @@ class Task:
             self.thread_pool = ThreadPoolExecutor(1)
         if self.process_pool is None and self._task_descriptor.type_parallelization == 'process':
             self.process_pool = ProcessPoolExecutor(1)
-        if self.async_loop is None and self._task_descriptor.type_task in ['async', 'async_independent']:
-            raise ValueError(f'The async or async_independent tasks need the async_loop parameter to work')
+        if self.async_loop is None and self._task_descriptor.type_parallelization == 'async':
+            raise ValueError(f'The parallel async tasks needs the async_loop parameter to work')
 
     def __eq__(self, other):
         return isinstance(other, Task) and self.name == other.name
@@ -138,9 +142,10 @@ class Task:
     def result(self):
         if self._on_execution is not None:
             if self.task_descriptor.type_task in ['parallel', 'independent']:
-                self._result = self._on_execution.result()
-            else:
-                self._result = self.async_loop.run_until_complete(self._on_execution)
+                if self.task_descriptor.type_parallelization in ['thread', 'process']:
+                    self._result = self._on_execution.result()
+                else:
+                    self._result = self.async_loop.run_until_complete(self._on_execution)
             self._on_execution = None
 
         r = self._result
@@ -155,16 +160,14 @@ class Task:
         if self.task_descriptor.type_task in ['parallel', 'independent']:
             if self.task_descriptor.type_parallelization == 'thread':
                 self._on_execution = self.thread_pool.submit(self.task_descriptor.func, **data)
-            else:
+            elif self.task_descriptor.type_parallelization == 'process':
                 self._on_execution = self.process_pool.submit(self.task_descriptor.func, **data)
-
-        elif self.task_descriptor.type_task in ['async', 'async_independent']:
-
-            self._on_execution = self.async_loop.create_task(
-                self.task_descriptor.func(
-                    **self._get_parameters_data(data)
+            else:
+                self._on_execution = self.async_loop.create_task(
+                    self.task_descriptor.func(
+                        **self._get_parameters_data(data)
+                    )
                 )
-            )
         else:
             self._result = self.task_descriptor.func(**data)
 

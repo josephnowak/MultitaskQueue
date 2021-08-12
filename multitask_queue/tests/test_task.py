@@ -62,7 +62,9 @@ class TestTask:
             task_dummy.run(data)
             assert data['a'] == [2]
 
-    def test_parallel_task(self):
+    def test_parallel_thread_task(self):
+        thread_pool = ThreadPoolExecutor(2)
+
         def sleep_append(a: List):
             time.sleep(0.2)
             a.append(1)
@@ -73,62 +75,83 @@ class TestTask:
             time.sleep(0.1)
             return {}
 
-        thread_pool = ThreadPoolExecutor(2)
+        task_sleep_append = Task(
+            TaskDescriptor(
+                func=sleep_append,
+                type_task='parallel',
+                exec_on_events=[],
+                exec_after_tasks=[],
+                exec_before_tasks=[],
+                autofill=[],
+                type_parallelization='thread'
+            ),
+            thread_pool=thread_pool,
+        )
+
+        task_append_sleep = Task(
+            TaskDescriptor(
+                func=append_sleep,
+                type_task='independent',
+                exec_on_events=[],
+                exec_after_tasks=[],
+                exec_before_tasks=[],
+                autofill=[],
+                type_parallelization='thread'
+            ),
+            thread_pool=thread_pool
+        )
+
+        data = {'a': list()}
+
+        task_sleep_append.run(data)
+        task_append_sleep.run(data)
+
+        data.update(task_sleep_append.result)
+        data.update(task_append_sleep.result)
+        result = data['a']
+
+        assert result == [2, 1]
+
+    def test_parallel_task(self):
         process_pool = ProcessPoolExecutor(2)
-        for type_parallelization in ['thread', 'process']:
-            if type_parallelization == 'thread':
-                func_sleep_append_func = sleep_append
-                func_append_sleep_func = append_sleep
-            else:
-                func_sleep_append_func = process_sleep_append
-                func_append_sleep_func = process_append_sleep
 
-            task_sleep_append = Task(
-                TaskDescriptor(
-                    func=func_sleep_append_func,
-                    type_task='parallel',
-                    exec_on_events=[],
-                    exec_after_tasks=[],
-                    exec_before_tasks=[],
-                    autofill=[],
-                    type_parallelization=type_parallelization
-                ),
-                thread_pool=thread_pool,
-                process_pool=process_pool
-            )
+        task_sleep_append = Task(
+            TaskDescriptor(
+                func=process_sleep_append,
+                type_task='parallel',
+                exec_on_events=[],
+                exec_after_tasks=[],
+                exec_before_tasks=[],
+                autofill=[],
+                type_parallelization='process'
+            ),
+            process_pool=process_pool
+        )
 
-            task_append_sleep = Task(
-                TaskDescriptor(
-                    func=func_append_sleep_func,
-                    type_task='independent',
-                    exec_on_events=[],
-                    exec_after_tasks=[],
-                    exec_before_tasks=[],
-                    autofill=[],
-                    type_parallelization=type_parallelization
-                ),
-                thread_pool=thread_pool,
-                process_pool=process_pool
-            )
+        task_append_sleep = Task(
+            TaskDescriptor(
+                func=process_append_sleep,
+                type_task='independent',
+                exec_on_events=[],
+                exec_after_tasks=[],
+                exec_before_tasks=[],
+                autofill=[],
+                type_parallelization='process'
+            ),
+            process_pool=process_pool
+        )
 
-            if type_parallelization == 'thread':
-                data = {'a': list()}
-            else:
-                data = {'a': Manager().Queue()}
-            task_sleep_append.run(data)
-            task_append_sleep.run(data)
+        data = {'a': Manager().Queue()}
+        task_sleep_append.run(data)
+        task_append_sleep.run(data)
+        data.update(task_sleep_append.result)
+        data.update(task_append_sleep.result)
 
-            data.update(task_sleep_append.result)
-            data.update(task_append_sleep.result)
+        result = []
+        while not data['a'].empty():
+            result.append(data['a'].get())
 
-            if type_parallelization == 'thread':
-                result = data['a']
-            else:
-                result = []
-                while not data['a'].empty():
-                    result.append(data['a'].get())
-
-            assert result == [2, 1]
+        assert result == [2, 1]
 
     def test_async_task(self):
         async def await_append(a: List):
@@ -145,11 +168,12 @@ class TestTask:
         task_await_append = Task(
             TaskDescriptor(
                 func=await_append,
-                type_task='async',
+                type_task='parallel',
                 exec_on_events=[],
                 exec_after_tasks=[],
                 exec_before_tasks=[],
-                autofill=[]
+                autofill=[],
+                type_parallelization='async'
             ),
             async_loop=loop
         )
@@ -157,11 +181,12 @@ class TestTask:
         task_append_await = Task(
             TaskDescriptor(
                 func=append_await,
-                type_task='async_independent',
+                type_task='independent',
                 exec_on_events=[],
                 exec_after_tasks=[],
                 exec_before_tasks=[],
-                autofill=[]
+                autofill=[],
+                type_parallelization='async'
             ),
             async_loop=loop
         )
@@ -226,6 +251,6 @@ class TestTask:
 if __name__ == "__main__":
     test = TestTask()
     # test.test_task_descriptor()
-    # test.test_async_task()
+    test.test_async_task()
     # test.test_parallel_task()
-    test.test_task_organizer()
+    # test.test_task_organizer()

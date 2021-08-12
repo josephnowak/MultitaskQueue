@@ -71,16 +71,14 @@ class Multitask:
                 data.update(task.result)
 
             # run the independents tasks and get the results if they were running in background
-            for type_task in ['independent', 'async_independent']:
-                for task in classified_tasks.get(type_task, []):
-                    independents.append(task)
-                    result = data.update(task.result)
-                    task.run(data)
+            for task in classified_tasks.get('independent', []):
+                independents.append(task)
+                result = data.update(task.result)
+                task.run(data)
 
             # run the parallel and async tasks
-            for type_task in ['parallel', 'async']:
-                for task in classified_tasks.get(type_task, []):
-                    task.run(data)
+            for task in classified_tasks.get('parallel', []):
+                task.run(data)
 
             # run the regular tasks
             for task in classified_tasks.get('regular', []):
@@ -159,16 +157,13 @@ class MultitasksQueue:
         tasks = set() if tasks is None else tasks
         data['user_tasks'] = tasks
         tasks = self.autofill_tasks(tasks, data)
-        data['user_tasks'] = tasks
 
         if tasks:
             tasks_organizer = self.tasks_organizer.filter_tasks({task.name for task in tasks}, copy_deep=True)
         else:
             tasks_organizer = self.tasks_organizer.copy(deep=True)
 
-        mt_queue = MultitasksOrganizer(
-            multitasks=[] if mt_queue is None else mt_queue
-        )
+        mt_queue = MultitasksOrganizer(multitasks=[] if mt_queue is None else mt_queue)
         data['mt_queue'] = mt_queue
 
         multitask = Multitask(
@@ -183,12 +178,13 @@ class MultitasksQueue:
             data['multitask'] = multitask
             multitask.run(data, tasks_organizer)
 
-        multitask = Multitask(
-            'postprocess',
-            events={'postprocess'},
-        )
+        multitask = Multitask('postprocess', events={'postprocess'})
         data['multitask'] = multitask
-        multitask.run(data, tasks_organizer, check_independent_finish=True)
+        multitask.run(data, tasks_organizer)
+
+        for task in tasks_organizer.tasks.values():
+            if task.type_task in ['async_independent', 'independent']:
+                data.update(task.result)
 
     def autofill_tasks(self, tasks: Set[str], data):
         autofilled_tasks = set()

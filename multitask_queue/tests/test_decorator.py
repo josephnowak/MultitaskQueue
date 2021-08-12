@@ -10,8 +10,6 @@ class TestDecorators:
             'regular_task': 'regular',
             'parallel_task': 'parallel',
             'independent_task': 'independent',
-            'async_task': 'async',
-            'async_independent_task': 'async_independent',
             'pre_execution_task': 'pre_execution',
             'autofill_task': 'autofill'
         }
@@ -19,12 +17,17 @@ class TestDecorators:
             decorator = getattr(decorators, decorator_name)
 
             if decorator_name != 'autofill_task':
-                @decorator(
+                parameters = dict(
                     exec_on_events=['event'],
                     exec_after_tasks=['dummy'],
                     exec_before_tasks=['dummy2'],
                     autofill=['dummy3']
                 )
+
+                if type_task in ['independent', 'parallel']:
+                    parameters['type_parallelization'] = 'thread'
+
+                @decorator(**parameters)
                 def dummy_func(a: int = 5):
                     pass
 
