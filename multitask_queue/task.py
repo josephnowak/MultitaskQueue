@@ -12,9 +12,11 @@ from loguru import logger
 
 class TaskDescriptor(BaseModel):
     """
-    The decorators automatically create this TaskDescriptor object, which in the instantiation process inspect
-    the function to get all parameters that it use to speed up the call of the function and of course it store
-    all the information that you send in the decorators, so it has the same parameters
+    Every task decorator create a TaskDescriptor object when you use it, this object allow to preserve the
+    settings and inspect the parameter of the functions only once (useful to speed up the calls of the tasks).
+
+    The meaning of all the parameters are explained in the
+    :meth:`decorators doc <multitask_queue.decorators.general_task>`
     """
 
     name: str = None
@@ -62,6 +64,27 @@ class TaskDescriptor(BaseModel):
 
 
 class Task:
+
+    """
+    The tasks are the smaller unit of execution of the framework (you can see it as the level 0),
+    they provide a simple interface to execute a function (even in different threads or process)
+    based on the settings of the task and they also provide a simple way to get the results only when necessary.
+
+    Parameters
+    ----------
+
+    task_descriptor: TaskDescriptor
+        Metadata and settings of the tasks
+    thread_pool: Optional[ThreadPoolExecutor] = None
+        If you have an already created thread_pool you can use it for the tasks, by default it will create
+        an internal thread_pool if the type_parallelization is 'thread'
+    process_pool: Optional[ProcessPoolExecutor]
+        If you have an already created process_pool you can use it for the tasks, by default it will create
+        an internal process_pool if the type_parallelization is 'process'
+    async_loop: asyncio.AbstractEventLoop
+        Only is necessary for the parallel task with type_parallelization 'async'
+
+    """
 
     def __init__(
             self,
@@ -124,6 +147,10 @@ class Task:
     def autofill(self):
         return self.task_descriptor.autofill
 
+    @property
+    def type_parallelization(self):
+        return self.task_descriptor.type_parallelization
+
     def copy(self):
         return Task(
             task_descriptor=self.task_descriptor,
@@ -140,6 +167,16 @@ class Task:
 
     @property
     def result(self):
+        """
+        Obtain the result of your task, automatically wait for the end of the task in case that is is being
+        run in another thread or process
+
+        Returns
+        -------
+
+        A Dict with the results of your function or an empty dict if the functions was never run
+        or the results were get before.
+        """
         if self._on_execution is not None:
             if self.task_descriptor.type_task in ['parallel', 'independent']:
                 if self.task_descriptor.type_parallelization in ['thread', 'process']:
@@ -153,6 +190,14 @@ class Task:
         return r
 
     def run(self, data: Dict[str, Any]):
+        """
+        Execute the function sent in the settings of the task, it does not return the results
+
+        Parameters
+        ----------
+        data: Dict[str, Any]
+            data for the parameters of the function of the task
+        """
         self._on_execution = None
         self._result = dict()
 
@@ -173,7 +218,24 @@ class Task:
 
 
 class TasksOrganizer:
-    def __init__(self, tasks: List[Task]):
+    """
+    All the tasks are created with the idea of being represented as a node in a Directed Acyclic Graph (DAG)
+    whereby, every node should has a set of outgoing arcs, those arcs represent an execution precedence with respect
+    to other tasks. Having the above abstraction in mine you can understand the purpose of this class which
+    is take the DAG formed by your tasks and sort it based on a
+    `topological sort <https://rosettacode.org/wiki/Topological_sort#Python.>`_ to create a simple iterable list
+    which in every position of the list all the tasks are independent between them and the tasks in the position
+    i must be executed before the tasks in the position i + 1.
+
+    Parameters
+    ----------
+
+    tasks: Iterable[Task]
+        List with all the tasks that want to be sorted
+
+    """
+
+    def __init__(self, tasks: Iterable[Task]):
         self.tasks = {task.name: task for task in tasks}
         sorted_tasks = self.sort_by_exec_order(self.tasks)
         self.max_deep = len(sorted_tasks)
@@ -186,7 +248,20 @@ class TasksOrganizer:
         return key in self.tasks
 
     @validate_arguments
-    def filter_tasks(self, tasks_name: Set[str], copy_deep: bool = False) -> Union['TaskOrganizer', None]:
+    def filter_tasks(self, tasks_name: Set[str], copy_deep: bool = False) -> Union['TasksOrganizer', None]:
+        """
+        Filter tasks of the DAG, useful if there are many tasks that you don't want to use for an specific
+        execution
+
+        Parameters
+        ----------
+
+        tasks_name: Set[str]
+            Tasks that must be preserved
+
+        copy_deep: bool
+            Indicate if we want to return a copy of the object or filter the tasks in-place
+        """
         filtered_tasks = {
             name: task.copy() if copy_deep else task
             for name, task in self.tasks.items()
@@ -231,6 +306,11 @@ class TasksOrganizer:
         return task_organizer
 
     def __iter__(self) -> Iterable[Dict[str, List[Task]]]:
+        """
+        Returns
+        -------
+        Every iteration return the tasks divided by type_task for an specific level, it goes from 0 to the max_deep
+        """
         iterators = {classification: iter(tasks) for classification, tasks in self.classified_tasks.items()}
         for i in range(self.max_deep):
             yield {classification: next(tasks_iter) for classification, tasks_iter in iterators.items()}

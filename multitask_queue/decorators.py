@@ -61,13 +61,15 @@ def general_task(
         autofill: Optional[List[str]] = None,
 ):
     """
-    This decorator will create a TaskDescriptor class that is automatically added to the PLUGINS, the PLUGINS
-    are used in the MultitaskQueue class to create an instance of a Task class which allow to run your function.
+    The decorators of this framework does not add any new functionality to your function, they only register
+    your function as a task, to do this they create a TaskDescriptor that is automatically added to the PLUGINS
+    of the framework and those PLUGINS are used by the
+    :meth:`MultitasksQueue <multitask_queue.multitask.MultitasksQueue>` to know all the task.
 
     Parameters
     ----------
     exec_on_events: List[str]
-        Events at which this Task must be executed, read Multitask events for more info.
+        Events at which this Task must be executed, read Multitask events doc for more info.
     type_task: Literal['regular', 'autofill', 'pre_execution', 'parallel', 'independent']
         Indicate the way that your task is going to be executed, for more info read the docs of the other tasks
         decorators which has an specific type_task.
@@ -85,7 +87,7 @@ def general_task(
 
     Examples
     --------
-    Task that is executed in the preprocess and postprocess events of a multitask and multiply by N a value:
+    Regular task that is executed in the preprocess and postprocess events of a multitask and multiply by N a value:
         >>> @regular_task(exec_on_events=['preprocess', 'postprocess'])
         ... def mul_by_n(value: int, n: int):
         ...     return {'value': value * n}
@@ -115,7 +117,7 @@ def regular_task(
     """
     A regular task is basically the same that a parallel task but without the overhead of parallelization,
     they are executed one after the other even in the same level so, they are synchronously executed.
-    (type_task with the 'regular' in :meth:`general_task`:)
+    (type_task with the 'regular' in :meth:`general_task`)
     """
     def decorator(func) -> Callable:
         add_task_to_plugins(
@@ -143,7 +145,7 @@ def parallel_task(
     The execution of the tasks in a DAG is by levels so, all the tasks that are in the same level can be executed at
     the same time, having that in mind we can indicate to the framework the way that we want to parallelize your task
     (multithreads, multiprocess or async).
-    (type_task = 'parallel' in :meth:`general_task`:)
+    (type_task = 'parallel' in :meth:`general_task`)
     """
     def decorator(func) -> Callable:
         add_task_to_plugins(
@@ -172,7 +174,7 @@ def independent_task(
     This is a variant of the parallel tasks, which have the characteristic that there is no other task that depend of it
     except itself so, these tasks are run in background during all the execution of the other tasks, if more than
     one Multitask run the same independent task it is going to wait that the task finish before start the other.
-    (type_task = 'independent' in :meth:`general_task`:)
+    (type_task = 'independent' in :meth:`general_task`)
     """
     def decorator(func) -> Callable:
         add_task_to_plugins(
@@ -194,7 +196,7 @@ def autofill_task(func):
     """
     This type of task is only used to call other tasks automatically based in the parameters that it receive, so
     it has the same function that the autofill parameter but with more customizable.
-    (type_task = 'autofill' in :meth:`general_task`:)
+    (type_task = 'autofill' in :meth:`general_task`)
     """
     add_task_to_plugins(
         func=func,
@@ -220,7 +222,7 @@ def pre_execution_task(
 ):
     """
     This task is executed before all the other type of tasks, is useful for modify the multitask events
-    (type_task = 'pre_execution' in :meth:`general_task`:)
+    (type_task = 'pre_execution' in :meth:`general_task`)
     """
     def decorator(func) -> Callable:
         add_task_to_plugins(

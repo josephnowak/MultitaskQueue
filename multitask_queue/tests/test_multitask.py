@@ -1,6 +1,6 @@
 from multitask_queue.multitask import MultitasksQueue, Multitask, MultitasksOrganizer
 from multitask_queue.task import TasksOrganizer, Task, TaskDescriptor
-from multitask_queue.decorators import regular_task, pre_execution_task
+from multitask_queue.decorators import regular_task, pre_execution_task, parallel_task
 
 
 class TestMultitask:
@@ -88,14 +88,13 @@ class TestMultitask:
         def mul_value(value: int, b: int):
             return {'value': value * b}
 
-        @regular_task(exec_on_events=['exception'])
+        @parallel_task(exec_on_events=['exception'], type_parallelization='thread')
         def divide_value(value: int, c: int):
             return {'value': value / c}
 
         data = {'value': 1, 'a': 1, 'b': 4, 'c': 2}
         multitasks = MultitasksQueue()
         multitasks.run(data)
-        print(data)
 
         assert data['value'] == 4
 
