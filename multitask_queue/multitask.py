@@ -90,6 +90,18 @@ class Multitask:
         """
         self._tasks.update(tasks)
 
+    def remove_events(self, events: Set[str]):
+        """
+        Remove events from the multitask
+        """
+        self._events.remove(events)
+
+    def remove_tasks(self, tasks: Set[str]):
+        """
+        Remove tasks from the multitask
+        """
+        self._tasks.remove(tasks)
+
     @staticmethod
     def _order_by_type_parallelization(tasks):
         """
@@ -107,9 +119,13 @@ class Multitask:
         """
         Iterate over the levels of the tasks_organizer object and execute all the tasks that has the same events
         that the multitask.
-        It run the tasks of the same level following the next order:
+        It runs the tasks of the same level following the next order:
         'pre_execution_task' -> 'independent_task' -> 'parallel_task' -> 'regular_task',
         for the 'parallel_task' the internal order is 'process' -> 'thread' -> 'async'.
+
+        It is possible to modify the events and tasks of a multitask during the execution using a pre execution task,
+        this can be done using the parameter multitask in the task.
+
 
         Parameters
         ----------
@@ -124,8 +140,20 @@ class Multitask:
             Indicate if we want to wait for the end of the independent tasks before finish this method,
             True means yes.
         """
+        data['multitask'] = self
+
         independents = []
         for classified_tasks in tasks_organizer:
+            pre_execution_tasks = {
+                task
+                for task in classified_tasks.get('pre_execution', set())
+                if (task.exec_on_events & self._events) or (task.name in self._tasks)
+            }
+
+            # run and get the results of the pre execution tasks
+            for task in pre_execution_tasks:
+                data.update(task.run(data).result)
+
             classified_tasks = {
                 classification: {
                     task for task in tasks
@@ -133,10 +161,6 @@ class Multitask:
                 }
                 for classification, tasks in classified_tasks.items()
             }
-            # run and get the results of the pre execution tasks
-            for task in classified_tasks.get('pre_execution', []):
-                task.run(data)
-                data.update(task.result)
 
             # run the independents tasks and get the results if they were running in background
             for task in self._order_by_type_parallelization(classified_tasks.get('independent', [])):
@@ -174,9 +198,10 @@ class MultitasksOrganizer:
 
     multitasks: Union[List[Multitask], Queue]
         This is the data structure that is going to handle the order in which the Multitasks are executed, it only
-        need to implement the put and get method.
+        needs to implement the put and get method.
 
     """
+
     def __init__(
             self,
             multitasks: Union[List[Multitask], Queue],
@@ -213,7 +238,6 @@ class MultitasksOrganizer:
 
 
 class MultitasksQueue:
-
     """
     This is the principal part of the framework (the level 2), it is fairly simple as it make heavy use of the others
     classes. What it does is that every time you instance this class it is going to scan all the tasks inside PLUGINS
@@ -306,17 +330,15 @@ class MultitasksQueue:
         if self.async_loop is None:
             self.async_loop = asyncio.get_event_loop()
 
-        self.tasks_organizer = TasksOrganizer(
-            [
-                Task(
-                    task_descriptor,
-                    thread_pool=self.thread_pool,
-                    process_pool=self.process_pool,
-                    async_loop=self.async_loop
-                )
-                for task_descriptor in PLUGINS.values()
-            ]
-        )
+        self.tasks_organizer = TasksOrganizer([
+            Task(
+                task_descriptor,
+                thread_pool=self.thread_pool,
+                process_pool=self.process_pool,
+                async_loop=self.async_loop
+            )
+            for task_descriptor in PLUGINS.values()
+        ])
 
     def run(
             self,
@@ -334,9 +356,8 @@ class MultitasksQueue:
             2. A while loop is run until all the tasks in the multitask queue were processed (note that you can add
             an infinite number of multitasks using any task)
 
-            3. A multitask with event 'postprocess' is executed after the step 2, this multitask is useful to store
+            3. A Multitask with event 'postprocess' is executed after the step 2, this multitask is useful to store
             the results.
-
 
         Notes
         -----
@@ -382,16 +403,13 @@ class MultitasksQueue:
             'preprocess',
             events={'preprocess'},
         )
-        data['multitask'] = multitask
         multitask.run(data, tasks_organizer)
 
         while not mt_queue.empty():
             multitask = mt_queue.get()
-            data['multitask'] = multitask
             multitask.run(data, tasks_organizer)
 
         multitask = Multitask('postprocess', events={'postprocess'})
-        data['multitask'] = multitask
         multitask.run(data, tasks_organizer)
 
         for task in tasks_organizer.tasks.values():
@@ -423,5 +441,3 @@ class MultitasksQueue:
                 )
             tasks_to_check_autofill += list(new_tasks - autofilled_tasks)
         return autofilled_tasks
-
-

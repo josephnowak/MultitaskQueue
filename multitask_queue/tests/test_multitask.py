@@ -6,6 +6,14 @@ from multitask_queue.decorators import regular_task, pre_execution_task, paralle
 class TestMultitask:
 
     def test_multitask(self):
+        def add_event_modification(multitask: Multitask):
+            multitask.add_events({'modification'})
+            return {}
+
+        def add_event_exception(multitask: Multitask):
+            multitask.add_events({'exception'})
+            return {}
+
         def sum_to_value(value: int, a: int):
             return {'value': value + a}
 
@@ -15,6 +23,26 @@ class TestMultitask:
         def divide_value(value: int, c: int):
             return {'value': value / c}
 
+        task_event_modification = Task(
+            TaskDescriptor(
+                func=add_event_modification,
+                type_task='pre_execution',
+                exec_on_events=['regular'],
+                exec_after_tasks=[],
+                exec_before_tasks=[],
+                autofill=[]
+            )
+        )
+        task_event_exception = Task(
+            TaskDescriptor(
+                func=add_event_exception,
+                type_task='pre_execution',
+                exec_on_events=['regular'],
+                exec_after_tasks=[],
+                exec_before_tasks=[],
+                autofill=[]
+            )
+        )
         task_sum = Task(
             TaskDescriptor(
                 func=sum_to_value,
@@ -46,21 +74,25 @@ class TestMultitask:
             )
         )
 
-        tasks_organizer = TasksOrganizer([task_mul, task_sum, task_div])
-
-        multitask = Multitask(
+        multitask_handler = Multitask(
             multitask_id='any',
-            events={'modification'}
+            events={'regular'}
         )
         data = {'value': 1, 'a': 1, 'b': 2, 'c': 2}
-        multitask.run(data, tasks_organizer)
+        multitask_handler.run(
+            data,
+            TasksOrganizer([task_mul, task_sum, task_div, task_event_modification])
+        )
         assert data['value'] == 4
 
-        multitask = Multitask(
+        multitask_handler = Multitask(
             multitask_id='any',
-            events={'exception'}
+            events={'regular'}
         )
-        multitask.run(data, tasks_organizer)
+        multitask_handler.run(
+            data,
+            TasksOrganizer([task_mul, task_sum, task_div, task_event_exception])
+        )
         assert data['value'] == 2
 
     def test_multitasks_queue(self):
