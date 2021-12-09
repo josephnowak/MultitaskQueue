@@ -4,7 +4,7 @@ It's a simple framework based on three composed concepts:
 2. Multitask: The multitask can be seen as a DAG with the ability to orquestate when and how run every task, based on events that can be modified during the execution.
 3. Multitask Queue: It's an extention to run multiple multitasks in a first-in-first-out (FIFO) order (this behaviour can be modified, for example you can use a priority queue or a class that has a put and a get method)
 
-The positive parts of this framework are the nexts:
+The positive parts of this framework are the followings:
 1. The tasks can be created with a simple decorator over a function.
 2. The tasks can be run in parallel depending on the decorator that you use, internally it can use async code, multithreads or multiprocess.
 3. The parameters of the functions are stored to speed up every call.
