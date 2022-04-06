@@ -32,15 +32,9 @@ class TaskDescriptor(BaseModel):
     exec_after_tasks: Set[str] = set()
     exec_before_tasks: Set[str] = set()
     autofill: Set[str] = set()
-    type_parallelization: Optional[Literal['thread', 'process', 'async']] = None
+    type_parallelization: Optional[Literal['thread', 'process', 'async']] = 'thread'
     parameters: List[str] = None
     default_parameters: Dict[str, Any] = None
-
-    @validator('type_parallelization')
-    def check_parallelization_type(cls, v, values):
-        if values['type_task'] in ['parallel', 'independent']:
-            assert v is not None
-        return v
 
     def __init__(
             self,
@@ -151,14 +145,6 @@ class Task:
     def type_parallelization(self):
         return self.task_descriptor.type_parallelization
 
-    def copy(self):
-        return Task(
-            task_descriptor=self.task_descriptor,
-            thread_pool=self.thread_pool,
-            process_pool=self.process_pool,
-            async_loop=self.async_loop
-        )
-
     def _get_parameters_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return {
             **self.task_descriptor.default_parameters,
@@ -247,10 +233,9 @@ class TasksOrganizer:
     def __contains__(self, key):
         return key in self.tasks
 
-    @validate_arguments
-    def filter_tasks(self, tasks_name: Set[str], copy_deep: bool = False) -> Union['TasksOrganizer', None]:
+    def filter_tasks(self, tasks_name: Set[str], copy_deep: bool = False) -> Union[None, TasksOrganizer]:
         """
-        Filter tasks of the DAG, useful if there are many tasks that you don't want to use for an specific
+        Filter tasks of the DAG, useful if there are many tasks that you don't want to use for a specific
         execution
 
         Parameters
@@ -263,15 +248,12 @@ class TasksOrganizer:
             Indicate if we want to return a copy of the object or filter the tasks in-place
         """
         filtered_tasks = {
-            name: task.copy() if copy_deep else task
-            for name, task in self.tasks.items()
-            if name in tasks_name
+            name: task for name, task in self.tasks.items() if name in tasks_name
         }
         filtered_classified_tasks = {
             classification: [
                 {
-                    task.copy() if copy_deep else task
-                    for task in tasks
+                    task for task in tasks
                     if task.name in tasks_name
                 }
                 for tasks in ordered_tasks
@@ -283,26 +265,16 @@ class TasksOrganizer:
             task_organizer.max_deep = self.max_deep
             task_organizer.classified_tasks = filtered_classified_tasks
             task_organizer.tasks = filtered_tasks
-
             return task_organizer
 
         self.classified_tasks = filtered_classified_tasks
         self.tasks = filtered_tasks
 
-    def copy(self, deep: bool = True):
+    def copy(self):
         task_organizer = TasksOrganizer([])
         task_organizer.max_deep = self.max_deep
-        if deep:
-            filtered_tasks = {name: task.copy() for name, task in self.tasks.items()}
-            filtered_classified_tasks = {
-                classification: [{task.copy() for task in tasks} for tasks in ordered_tasks]
-                for classification, ordered_tasks in self.classified_tasks.items()
-            }
-            task_organizer.classified_tasks = filtered_classified_tasks
-            task_organizer.tasks = filtered_tasks
-
-        task_organizer.classified_tasks = self.classified_tasks
-        task_organizer.tasks = self.tasks
+        task_organizer.classified_tasks = self.classified_tasks.copy()
+        task_organizer.tasks = self.tasks.copy()
         return task_organizer
 
     def __iter__(self) -> Iterable[Dict[str, List[Task]]]:

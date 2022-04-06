@@ -5,6 +5,8 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 from typing import List, Dict, Iterable, Literal, Optional, Callable, Any, Set, Union, Hashable
 from queue import Queue
 
+from loguru import logger
+
 from multitask_queue.task import Task, TasksOrganizer
 from multitask_queue.decorators import PLUGINS
 
@@ -152,7 +154,8 @@ class Multitask:
 
             # run and get the results of the pre execution tasks
             for task in pre_execution_tasks:
-                data.update(task.run(data).result)
+                task.run(data)
+                data.update(task.result)
 
             classified_tasks = {
                 classification: {
@@ -165,7 +168,7 @@ class Multitask:
             # run the independents tasks and get the results if they were running in background
             for task in self._order_by_type_parallelization(classified_tasks.get('independent', [])):
                 independents.append(task)
-                result = data.update(task.result)
+                data.update(task.result)
                 task.run(data)
 
             # run the parallel and async tasks
@@ -394,7 +397,7 @@ class MultitasksQueue:
         if tasks:
             tasks_organizer = self.tasks_organizer.filter_tasks({task.name for task in tasks}, copy_deep=True)
         else:
-            tasks_organizer = self.tasks_organizer.copy(deep=True)
+            tasks_organizer = self.tasks_organizer.copy()
 
         mt_queue = MultitasksOrganizer(multitasks=[] if mt_queue is None else mt_queue)
         data['mt_queue'] = mt_queue
