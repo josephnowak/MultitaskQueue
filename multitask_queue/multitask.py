@@ -423,14 +423,16 @@ class MultitasksQueue:
         del data['mt_queue']
         del data['user_tasks']
 
-    def autofill_tasks(self, tasks: Set[str], data):
+    def autofill_tasks(self, tasks: Set[str], data) -> Set[Task]:
         autofilled_tasks = set()
         tasks_to_check_autofill = list(tasks)
+
         while tasks_to_check_autofill:
             task = self.tasks_organizer[tasks_to_check_autofill[0]]
             tasks_to_check_autofill = tasks_to_check_autofill[1:]
+
             if task.type_task != 'autofill':
-                autofilled_tasks.add(task)
+                autofilled_tasks.add(task.name)
                 new_tasks = task.autofill
             else:
                 task.run(data)
@@ -442,5 +444,8 @@ class MultitasksQueue:
                     f'The task {task.name} is autofilling '
                     f'the next tasks that are not in the DAG: {invalid_tasks}'
                 )
+
             tasks_to_check_autofill += list(new_tasks - autofilled_tasks)
+
+        autofilled_tasks = set(self.tasks_organizer[task] for task in autofilled_tasks)
         return autofilled_tasks
