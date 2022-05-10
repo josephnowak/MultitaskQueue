@@ -1,8 +1,8 @@
 import asyncio
 import os
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
-from typing import List, Dict, Iterable, Literal, Optional, Callable, Any, Set, Union, Hashable
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from typing import List, Dict, Optional, Callable, Any, Set, Union, Hashable
 from queue import Queue
 
 from loguru import logger
@@ -15,7 +15,7 @@ class Multitask:
     """
     Multitask provides a simple interface to execute multiple tasks based on a
     :meth:`specific order <multitask_queue.task.TasksOrganizer>` and in specifics events
-    (read events in the parameters doc). What it does is simple, it takes a TasksOrganizer object iterate
+    (read events in the parameters' doc). What it does is simple, it takes a TasksOrganizer object iterate
     over it and only execute the tasks that has the same events that the Multitask instance.
     You can see this class as the level 1 of the framework.
 
@@ -330,8 +330,6 @@ class MultitasksQueue:
         self.thread_pool = ThreadPoolExecutor(os.cpu_count() if max_threads is None else max_threads)
         self.process_pool = ProcessPoolExecutor(os.cpu_count() if max_process is None else max_process)
         self.async_loop = async_loop
-        if self.async_loop is None:
-            self.async_loop = asyncio.get_event_loop()
 
         self.tasks_organizer = TasksOrganizer([
             Task(
