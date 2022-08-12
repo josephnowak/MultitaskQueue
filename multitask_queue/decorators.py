@@ -6,7 +6,7 @@ from multitask_queue.task import TaskDescriptor
 
 
 PLUGINS: Dict[str, TaskDescriptor] = dict()
-execution_times: Dict[str, List[float]] = dict()
+EXECUTION_TIMES: Dict[str, List[float]] = dict()
 
 
 def add_task_to_plugins(
@@ -22,24 +22,25 @@ def add_task_to_plugins(
     if func.__name__ in PLUGINS:
         raise ValueError(f'The task name must be unique and {func.__name__} is already in use')
 
-    if not debug:
-        PLUGINS[func.__name__] = TaskDescriptor(
-            func=func,
-            exec_on_events=exec_on_events,
-            autofill=set() if autofill is None else autofill,
-            type_task=type_task,
-            exec_before_tasks=set() if exec_before_tasks is None else exec_before_tasks,
-            exec_after_tasks=set() if exec_after_tasks is None else exec_after_tasks,
-            type_parallelization=type_parallelization
-        )
-    else:
-        execution_times[func.__name__] = []
+    PLUGINS[func.__name__] = TaskDescriptor(
+        func=func,
+        exec_on_events=exec_on_events,
+        autofill=set() if autofill is None else autofill,
+        type_task=type_task,
+        exec_before_tasks=set() if exec_before_tasks is None else exec_before_tasks,
+        exec_after_tasks=set() if exec_after_tasks is None else exec_after_tasks,
+        type_parallelization=type_parallelization
+    )
+
+    if debug:
+        EXECUTION_TIMES[func.__name__] = []
+        from loguru import logger
 
         def wrapper(*args, **kwargs):
             start = timer()
             r = func(*args, **kwargs)
-            execution_times[func.__name__].append(timer() - start)
-            r['time_' + func.__name__] = execution_times[func.__name__]
+            EXECUTION_TIMES[func.__name__].append(timer() - start)
+            logger.info(f'{func.__name__} took {timer() - start} seconds')
             return r
 
         PLUGINS[func.__name__].func = wrapper
