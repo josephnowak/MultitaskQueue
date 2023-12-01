@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-
-from functools import reduce
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
-from typing import List, Dict, Iterable, Literal, Optional, Callable, Any, Set, Union, Hashable
-from pydantic import BaseModel, validators, validate_arguments, validator
-from loguru import logger
+from functools import reduce
+from typing import List, Dict, Iterable, Literal, Optional, Callable, Any, Set, Union
+
+from pydantic import BaseModel
 
 
 class TaskDescriptor(BaseModel):
@@ -58,7 +57,6 @@ class TaskDescriptor(BaseModel):
 
 
 class Task:
-
     """
     The tasks are the smaller unit of execution of the framework (you can see it as the level 0),
     they provide a simple interface to execute a function (even in different threads or process)

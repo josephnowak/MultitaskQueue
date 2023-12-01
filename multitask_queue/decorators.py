@@ -1,9 +1,9 @@
-from typing import Dict, List, Union, Optional, Literal, Callable, Set, Any
-from pydantic import validate_arguments, BaseModel
 from timeit import default_timer as timer
+from typing import Dict, List, Optional, Literal, Callable
+
+from pydantic import validate_call
 
 from multitask_queue.task import TaskDescriptor
-
 
 PLUGINS: Dict[str, TaskDescriptor] = dict()
 EXECUTION_TIMES: Dict[str, List[float]] = dict()
@@ -24,7 +24,7 @@ def add_task_to_plugins(
 
     PLUGINS[func.__name__] = TaskDescriptor(
         func=func,
-        exec_on_events=exec_on_events,
+        exec_on_events=set(exec_on_events),
         autofill=set() if autofill is None else autofill,
         type_task=type_task,
         exec_before_tasks=set() if exec_before_tasks is None else exec_before_tasks,
@@ -46,7 +46,7 @@ def add_task_to_plugins(
         PLUGINS[func.__name__].func = wrapper
 
 
-@validate_arguments
+@validate_call
 def general_task(
         exec_on_events: List[str],
         type_task: Literal[
@@ -93,6 +93,7 @@ def general_task(
         ... def mul_by_n(value: int, n: int):
         ...     return {'value': value * n}
     """
+
     def decorator(func) -> Callable:
         add_task_to_plugins(
             func=func,
@@ -108,7 +109,7 @@ def general_task(
     return decorator
 
 
-@validate_arguments
+@validate_call
 def regular_task(
         exec_on_events: List[str],
         exec_after_tasks: List[str] = None,
@@ -120,6 +121,7 @@ def regular_task(
     they are executed one after the other even in the same level so, they are synchronously executed.
     (type_task with the 'regular' in :meth:`general_task`)
     """
+
     def decorator(func) -> Callable:
         add_task_to_plugins(
             func=func,
@@ -134,7 +136,7 @@ def regular_task(
     return decorator
 
 
-@validate_arguments
+@validate_call
 def parallel_task(
         exec_on_events: List[str],
         type_parallelization: Literal['thread', 'async', 'process'],
@@ -148,6 +150,7 @@ def parallel_task(
     (multithreads, multiprocess or async).
     (type_task = 'parallel' in :meth:`general_task`)
     """
+
     def decorator(func) -> Callable:
         add_task_to_plugins(
             func=func,
@@ -163,7 +166,7 @@ def parallel_task(
     return decorator
 
 
-@validate_arguments
+@validate_call
 def independent_task(
         exec_on_events: List[str],
         type_parallelization: Literal['async', 'thread', 'process'],
@@ -177,6 +180,7 @@ def independent_task(
     one Multitask run the same independent task it is going to wait that the task finish before start the other.
     (type_task = 'independent' in :meth:`general_task`)
     """
+
     def decorator(func) -> Callable:
         add_task_to_plugins(
             func=func,
@@ -192,7 +196,7 @@ def independent_task(
     return decorator
 
 
-@validate_arguments
+@validate_call
 def autofill_task(func):
     """
     This type of task is only used to call other tasks automatically based in the parameters that it receive, so
@@ -214,7 +218,7 @@ def autofill_task(func):
     return wrapper
 
 
-@validate_arguments
+@validate_call
 def pre_execution_task(
         exec_on_events: List[str],
         exec_after_tasks: List[str] = None,
@@ -225,6 +229,7 @@ def pre_execution_task(
     This task is executed before all the other type of tasks, is useful for modify the multitask events
     (type_task = 'pre_execution' in :meth:`general_task`)
     """
+
     def decorator(func) -> Callable:
         add_task_to_plugins(
             func=func,

@@ -1,5 +1,3 @@
-from multitask_queue.task import TaskDescriptor
-
 from multitask_queue import decorators
 
 
@@ -55,4 +53,3 @@ class TestDecorators:
 if __name__ == "__main__":
     test = TestDecorators()
     test.test_decorators()
-

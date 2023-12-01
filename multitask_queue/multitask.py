@@ -1,14 +1,11 @@
 import asyncio
 import os
-
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from typing import List, Dict, Optional, Callable, Any, Set, Union, Hashable
 from queue import Queue
+from typing import List, Dict, Optional, Any, Set, Union, Hashable
 
-from loguru import logger
-
-from multitask_queue.task import Task, TasksOrganizer
 from multitask_queue.decorators import PLUGINS
+from multitask_queue.task import Task, TasksOrganizer
 
 
 class Multitask:

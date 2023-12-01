@@ -6,7 +6,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='multitask_queue',
-    version='0.01',
+    version='0.1.0',
     description='Framework for running multiple multitasks, useful for backtesting',
     author='Joseph Nowak',
     author_email='josephgonowak97@gmail.com',

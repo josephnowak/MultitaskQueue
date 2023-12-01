@@ -1,6 +1,6 @@
+from multitask_queue.decorators import regular_task, pre_execution_task, parallel_task
 from multitask_queue.multitask import MultitasksQueue, Multitask, MultitasksOrganizer
 from multitask_queue.task import TasksOrganizer, Task, TaskDescriptor
-from multitask_queue.decorators import regular_task, pre_execution_task, parallel_task
 
 
 class TestMultitask:
