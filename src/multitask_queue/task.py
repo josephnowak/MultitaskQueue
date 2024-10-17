@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
+from collections.abc import Callable, Iterable
+from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from functools import reduce
-from typing import List, Dict, Iterable, Literal, Optional, Callable, Any, Set, Union
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -27,13 +28,13 @@ class TaskDescriptor(BaseModel):
         'parallel',
         'independent'
     ]
-    exec_on_events: Set[str]
-    exec_after_tasks: Set[str] = set()
-    exec_before_tasks: Set[str] = set()
-    autofill: Set[str] = set()
+    exec_on_events: set[str]
+    exec_after_tasks: set[str] = set()
+    exec_before_tasks: set[str] = set()
+    autofill: set[str] = set()
     type_parallelization: Optional[Literal['thread', 'process', 'async']] = 'thread'
-    parameters: List[str] = None
-    default_parameters: Dict[str, Any] = None
+    parameters: list[str] = None
+    default_parameters: dict[str, Any] = None
 
     def __init__(
             self,
@@ -97,7 +98,7 @@ class Task:
         if self.process_pool is None and self._task_descriptor.type_parallelization == 'process':
             self.process_pool = ProcessPoolExecutor(1)
         if self.async_loop is None and self._task_descriptor.type_parallelization == 'async':
-            raise ValueError(f'The parallel async tasks needs the async_loop parameter to work')
+            raise ValueError('The parallel async tasks needs the async_loop parameter to work')
 
     def __eq__(self, other):
         return isinstance(other, Task) and self.name == other.name
@@ -143,7 +144,7 @@ class Task:
     def type_parallelization(self):
         return self.task_descriptor.type_parallelization
 
-    def _get_parameters_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_parameters_data(self, data: dict[str, Any]) -> dict[str, Any]:
         return {
             **self.task_descriptor.default_parameters,
             **{k: data[k] for k in self.task_descriptor.parameters if k in data},
@@ -173,7 +174,7 @@ class Task:
         self._result = dict()
         return r
 
-    def run(self, data: Dict[str, Any]):
+    def run(self, data: dict[str, Any]):
         """
         Execute the function sent in the settings of the task, it does not return the results
 
@@ -231,7 +232,7 @@ class TasksOrganizer:
     def __contains__(self, key):
         return key in self.tasks
 
-    def filter_tasks(self, tasks_name: Set[str], copy_deep: bool = False) -> Union[None, TasksOrganizer]:
+    def filter_tasks(self, tasks_name: set[str], copy_deep: bool = False) -> Union[None, TasksOrganizer]:
         """
         Filter tasks of the DAG, useful if there are many tasks that you don't want to use for a specific
         execution
@@ -275,18 +276,18 @@ class TasksOrganizer:
         task_organizer.tasks = self.tasks.copy()
         return task_organizer
 
-    def __iter__(self) -> Iterable[Dict[str, List[Task]]]:
+    def __iter__(self) -> Iterable[dict[str, list[Task]]]:
         """
         Returns
         -------
         Every iteration return the tasks divided by type_task for an specific level, it goes from 0 to the max_deep
         """
         iterators = {classification: iter(tasks) for classification, tasks in self.classified_tasks.items()}
-        for i in range(self.max_deep):
+        for _ in range(self.max_deep):
             yield {classification: next(tasks_iter) for classification, tasks_iter in iterators.items()}
 
     @staticmethod
-    def sort_by_exec_order(tasks: Dict[str, Task]) -> List[Set[Task]]:
+    def sort_by_exec_order(tasks: dict[str, Task]) -> list[set[Task]]:
         if not tasks:
             return []
 
@@ -326,7 +327,7 @@ class TasksOrganizer:
         return [set(tasks[task_name] for task_name in group) for group in ordered_tasks]
 
     @staticmethod
-    def classify_tasks_by_type(ordered_tasks: List[Set[Task]]) -> Dict[Any, List[Set[Task]]]:
+    def classify_tasks_by_type(ordered_tasks: list[set[Task]]) -> dict[Any, list[set[Task]]]:
         if not ordered_tasks:
             return {}
 

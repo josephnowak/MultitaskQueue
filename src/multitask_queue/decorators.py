@@ -1,22 +1,23 @@
+from collections.abc import Callable
 from timeit import default_timer as timer
-from typing import Dict, List, Optional, Literal, Callable
+from typing import Literal, Optional
 
 from pydantic import validate_call
 
 from multitask_queue.task import TaskDescriptor
 
-PLUGINS: Dict[str, TaskDescriptor] = dict()
-EXECUTION_TIMES: Dict[str, List[float]] = dict()
+PLUGINS: dict[str, TaskDescriptor] = dict()
+EXECUTION_TIMES: dict[str, list[float]] = dict()
 
 
 def add_task_to_plugins(
         func: Callable,
-        exec_on_events: List[str],
+        exec_on_events: list[str],
         type_task: str,
         type_parallelization: Literal['thread', 'async', 'process'] = None,
-        exec_after_tasks: Optional[List[str]] = None,
-        exec_before_tasks: Optional[List[str]] = None,
-        autofill: Optional[List[str]] = None,
+        exec_after_tasks: Optional[list[str]] = None,
+        exec_before_tasks: Optional[list[str]] = None,
+        autofill: Optional[list[str]] = None,
         debug: bool = False
 ):
     if func.__name__ in PLUGINS:
@@ -48,7 +49,7 @@ def add_task_to_plugins(
 
 @validate_call
 def general_task(
-        exec_on_events: List[str],
+        exec_on_events: list[str],
         type_task: Literal[
             'regular',
             'autofill',
@@ -57,9 +58,9 @@ def general_task(
             'independent'
         ],
         type_parallelization: Literal['thread', 'async', 'process'] = None,
-        exec_after_tasks: List[str] = None,
-        exec_before_tasks: List[str] = None,
-        autofill: Optional[List[str]] = None,
+        exec_after_tasks: list[str] = None,
+        exec_before_tasks: list[str] = None,
+        autofill: Optional[list[str]] = None,
 ):
     """
     The decorators of this framework does not add any new functionality to your function, they only register
@@ -111,10 +112,10 @@ def general_task(
 
 @validate_call
 def regular_task(
-        exec_on_events: List[str],
-        exec_after_tasks: List[str] = None,
-        exec_before_tasks: List[str] = None,
-        autofill: Optional[List[str]] = None,
+        exec_on_events: list[str],
+        exec_after_tasks: list[str] = None,
+        exec_before_tasks: list[str] = None,
+        autofill: Optional[list[str]] = None,
 ):
     """
     A regular task is basically the same that a parallel task but without the overhead of parallelization,
@@ -138,11 +139,11 @@ def regular_task(
 
 @validate_call
 def parallel_task(
-        exec_on_events: List[str],
+        exec_on_events: list[str],
         type_parallelization: Literal['thread', 'async', 'process'],
-        exec_after_tasks: List[str] = None,
-        exec_before_tasks: List[str] = None,
-        autofill: Optional[List[str]] = None,
+        exec_after_tasks: list[str] = None,
+        exec_before_tasks: list[str] = None,
+        autofill: Optional[list[str]] = None,
 ):
     """
     The execution of the tasks in a DAG is by levels so, all the tasks that are in the same level can be executed at
@@ -168,11 +169,11 @@ def parallel_task(
 
 @validate_call
 def independent_task(
-        exec_on_events: List[str],
+        exec_on_events: list[str],
         type_parallelization: Literal['async', 'thread', 'process'],
-        exec_after_tasks: List[str] = None,
-        exec_before_tasks: List[str] = None,
-        autofill: Optional[List[str]] = None,
+        exec_after_tasks: list[str] = None,
+        exec_before_tasks: list[str] = None,
+        autofill: Optional[list[str]] = None,
 ):
     """
     This is a variant of the parallel tasks, which have the characteristic that there is no other task that depend of it
@@ -220,10 +221,10 @@ def autofill_task(func):
 
 @validate_call
 def pre_execution_task(
-        exec_on_events: List[str],
-        exec_after_tasks: List[str] = None,
-        exec_before_tasks: List[str] = None,
-        autofill: Optional[List[str]] = None,
+        exec_on_events: list[str],
+        exec_after_tasks: list[str] = None,
+        exec_before_tasks: list[str] = None,
+        autofill: Optional[list[str]] = None,
 ):
     """
     This task is executed before all the other type of tasks, is useful for modify the multitask events

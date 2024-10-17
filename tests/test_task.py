@@ -1,10 +1,9 @@
 import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from multiprocessing import Queue, Manager
-from typing import List
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from multiprocessing import Manager, Queue
 
-from multitask_queue.task import Task, TaskDescriptor, TasksOrganizer
+from multitask_queue import Task, TaskDescriptor, TasksOrganizer
 
 
 def process_append_sleep(a: Queue):
@@ -42,7 +41,7 @@ class TestTask:
         assert isinstance(task_descriptor.autofill, set)
 
     def test_regular_pre_execution_task(self):
-        def dummy_func(a: List, b: int):
+        def dummy_func(a: list, b: int):
             a.append(b)
             return {'a': a}
 
@@ -64,12 +63,12 @@ class TestTask:
     def test_parallel_thread_task(self):
         thread_pool = ThreadPoolExecutor(2)
 
-        def sleep_append(a: List):
+        def sleep_append(a: list):
             time.sleep(0.2)
             a.append(1)
             return {}
 
-        def append_sleep(a: List):
+        def append_sleep(a: list):
             a.append(2)
             time.sleep(0.1)
             return {}
@@ -153,12 +152,12 @@ class TestTask:
         assert result == [2, 1]
 
     def test_async_task(self):
-        async def await_append(a: List):
+        async def await_append(a: list):
             await asyncio.sleep(0.5)
             a.append(1)
             return {}
 
-        async def append_await(a: List):
+        async def append_await(a: list):
             a.append(2)
             await asyncio.sleep(0.3)
             return {}
