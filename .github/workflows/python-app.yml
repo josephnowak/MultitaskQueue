@@ -1,0 +1,35 @@
+name: Python package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.4.22"
+      - name: Install dependencies
+        run: |
+          uv pip install --system ruff pytest pytest-cov pytest-xdist
+          uv pip install --system .
+      - name: Lint with ruff
+        run: |
+          ruff check
+      - name: Test with pytest
+        run: |
+          pytest -n 4 --cov
