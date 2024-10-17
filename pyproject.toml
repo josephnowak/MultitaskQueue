@@ -1,0 +1,74 @@
+[tool.pdm]
+
+[project]
+name = "multitask_queue"
+version = "0.2.0"
+description = "Framework for running multiple multitasks, useful for backtesting"
+keywords = ["Framework Queue DAGs Backtest Task Multitask MultitaskQueue"]
+readme = "README.md"
+authors = [
+    {name = "Joseph Nowak", email = "josephgonowak97@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 1 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: General",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+]
+dependencies = [
+    "loguru",
+    "pydantic",
+]
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-cov",
+    "pytest-env",
+    "pytest-xdist",
+    "sphinx",
+]
+
+[tool.ruff]
+
+[tool.ruff.lint]
+# E402: module level import not at top of file
+# E501: line too long - let black worry about that
+# E731: do not assign a lambda expression, use a def
+extend-safe-fixes = [
+    "TID252", # absolute imports
+]
+ignore = [
+    "E402",
+    "E501",
+    "E731",
+    "UP007",
+    "UP038"
+]
+extend-select = [
+    "B", # flake8-bugbear
+    "F", # Pyflakes
+    "E", # Pycodestyle
+    "W",
+    "TID", # flake8-tidy-imports (absolute imports)
+    "I", # isort
+    "UP", # Pyupgrade
+]
+
+[tool.ruff.lint.per-file-ignores]
+# don't enforce absolute imports
+
+[tool.ruff.lint.isort]
+known-first-party = ["multitask_queue"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
